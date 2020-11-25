@@ -1,134 +1,111 @@
 import React, { Component } from 'react';
-import Promise from 'promise';
-import { getMarvelCharacters } from './lib/apiCalls';
-import './App.css';
-import Header from './components/header';
 import Character from './components/character';
-import Paginator from './components/paginator';
-import Filters from './components/filters';
-import SortByName from './components/sortByName';
-import Loading from './components/loading';
+import Arsenal from './components/arsenal';
+import './App.css';
+
 
 class App extends Component {
   state = {
-    loading: false,
-    filters: {
-      name: {
-        value: '',
-        exactMatch: false,
-      }
-    },
-    sortName: '',
-    characters: [],
-    page: 0,
-    maxPage: 0,
-    limitPerPage: 20,
+    characters: [
+      {id: 1, name: 'Arya Stark', weapon: 'Unarmed', errorMessage: '',
+              description: 'A girl has no description.', selected: false},
+
+      {id: 2, name: 'Sansa Stark', weapon: 'Unarmed', errorMessage: '',
+              description: "Had an unfortunate crush on Joffrey and" +
+                            " made some bad life choices, but now she's awesome.", selected: false},
+
+      {id: 3, name: 'Brienne of Tarth', weapon: 'Unarmed', errorMessage: '',
+              description:"The legend. The master. Can she do no wrong? I love her so much.", selected: false},
+
+      {id: 4, name: 'Jaime Lannister', weapon: 'Unarmed', errorMessage: '',
+              description:"Formerly evil, currently adorable.", selected: false},
+
+      {id: 5, name: 'Cersei Lannister', weapon: 'Unarmed', errorMessage: '',
+              description:"Just the worst.", selected: false},
+
+      {id: 6, name: 'Daenerys/Khaleesi/Mother of Dragons', weapon: 'Unarmed', errorMessage: '',
+              description:"Super cool chick.", selected: false}
+    ],
+
+    weapons: [
+      {id: 1, value: 'Sword'},
+      {id: 2, value: 'Bow & Arrow'},
+      {id: 3, value: 'Dragon'},
+      {id: 4, value: 'Poison'},
+      {id: 5, value: 'Dagger'},
+      {id: 6, value: 'Wildfire'}
+    ]
+  }
+
+  handleSelected = (character) => {
+    const characters = [...this.state.characters]
+    const index = characters.indexOf(character)
+    characters[index] = {...character}
+    characters[index].selected = true
+    this.setState({ characters });
+  }
+
+  handleWeaponClick = (character, weaponName, weaponIndex) => {
+    const characters = [...this.state.characters]
+    const index = characters.indexOf(character)
+    characters[index] = {...character}
+    this.availabilityOfWeapons(characters, index, weaponName, weaponIndex);
+  }
+
+  availabilityOfWeapons = (characters, index, weaponName, weaponIndex) => {
+    if (this.state.weapons.find(item => item.value === weaponName) !== undefined ) {
+      this.arm(characters, index, weaponName, weaponIndex);
+    } else {
+      this.noAvailability(characters, index);
+    }
   };
 
-  componentWillMount() {
-    this.search({ sortName: this.state.sortName });
+  arm = (characters, index, weaponName, weaponIndex) => {
+    characters[index].weapon = weaponName
+    this.setState({ characters });
+    this.takeWeapon(weaponIndex);
+  };
+
+  takeWeapon = weaponID => {
+    const weapons = this.state.weapons.filter(weapon => weapon.id !== weaponID);
+    this.setState({weapons: weapons});
+  };
+
+  noAvailability = (characters, index) => {
+    characters[index].errorMessage = 'You have already given this weapon'
+    + ' to another character'
+    this.setState({ characters });
   }
-
-  changePage = (page) => {
-    /* UNCOMMENT THIS BLOCK TO PASS THE CHALLENGE
-    if (page !== this.state.page) {
-      this.search({
-        page,
-      });
-    }
-    */
-  }
-
-  nextPages = (maxPage) => {
-    this.changePage(maxPage + 1);
-  }
-
-  previousPages = (minPage) => {
-    if (minPage > 1) {
-      this.changePage(minPage - 1)
-    }
-  }
-
-  applyFilters = () => {
-    this.search({
-      name: this.filters.state.name.trim(),
-      exactMatch: this.filters.state.exactMatch,
-    }).then(this.afterFilter);
-  }
-
-  search = (options = {}) => {
-    this.setState({ loading: true });
-    const {
-      page,
-      name,
-      exactMatch,
-      sortName,
-      limit,
-    } = Object.assign({
-      page: 1,
-      name: this.state.filters.name.value,
-      exactMatch: this.state.filters.name.exactMatch,
-      sortName: this.state.sortName,
-      limit: this.state.limitPerPage,
-    }, options);
-    const offset = page ? (page - 1) * limit : 0;
-
-    const p = new Promise((resolve, reject) => {
-      getMarvelCharacters({ offset, name, exactMatch, sortName, limit })
-        .then(({ characters, maxPage }) => {
-          this.setState({
-            characters,
-            maxPage,
-            page: characters.length ? page : 0,
-            filters: { name: { value: name, exactMatch } },
-            sortName,
-            limitPerPage: limit,
-          });
-          resolve({ characters, maxPage, page });
-        })
-        .catch((error) => reject(error));
-    });
-    p.done(() => this.setState({ loading: false }));
-
-    return p;
-  }
-
-  resetFilters = () => this.search({ name: '', exactMatch: false }).then(this.afterFilter)
-
-  afterFilter = ({ page, maxPage }) => this.paginator.setPages(page, maxPage)
-
-  sortByName = (event) => this.search({ page: this.state.page, sortName: event.target.value })
-
-  changeLimitPerPage = (event) => this.search({ page: this.state.page, limit: event.target.value })
 
   render() {
     return (
-      <div className="App">
-        <Header />
-        <nav className="navbar App-navbar">
-          <ul className="nav navbar-nav">
-            <li className="active"><a href="/"><span className="h4">Characters</span></a></li>
-            {/*<li><a href="#"><span className="h4">Comics</span></a></li>*/}
-          </ul>
-        </nav>
-        <Filters ref={filters => this.filters = filters} onApply={this.applyFilters} onReset={this.resetFilters} />
-        <SortByName onChangeSort={this.sortByName} onChangeLimit={this.changeLimitPerPage} />
-        {!this.state.loading &&
-          <div className="App-characters">{
-            this.state.characters
-            // .filter(c => /^(.(?!image_not_available$))+$/.test(c.thumbnail.path))
-              .map(c => <Character key={c.id} instance={c}/>)
-        }</div>}
-        {this.state.loading && <Loading />}
-        <Paginator ref={paginator => this.paginator = paginator}
-                   page={this.state.page}
-                   maxPage={this.state.maxPage}
-                   onChangePage={this.changePage}
-                   onNext={this.nextPages}
-                   onPrevious={this.previousPages} />
-      </div>
+      <React.Fragment>
+        <div className='arsenal'>
+          <h2> Arsenal </h2>
+          {this.state.weapons.map(weapon => (
+            <Arsenal
+              key={weapon.id}
+              weapon={weapon}
+            />
+          ))}
+        </div>
+
+        <div className = 'characters'>
+        <div className = 'title'>   Characters </div>
+          {this.state.characters.map(character => (
+             <Character
+                key={character.id}
+                character={character}
+                handleWeaponClick={this.handleWeaponClick}
+                handleSelected={this.handleSelected}
+                id={character.id}
+              />
+           ))}
+        </div>
+
+
+     </React.Fragment>
     );
-    //TODO: Define an error messages container.
   }
 }
 
